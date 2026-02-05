@@ -21,11 +21,10 @@ cards:
       {% set comfort_target = inputs['comfort_target_c'] | float(22) %}
       {% set comfort_offset = inputs['comfort_to_heatpump_offset_c'] | float(2) %}
       {% set storage_offset = inputs['storage_to_heatpump_offset_c'] | float(2) %}
-      {% set comfort_margin = inputs['comfort_satisfied_margin_c'] | float(0.2) %}
-      {% set warm_margin = inputs['warm_margin'] | float(0.3) %}
+      {% set comfort_margin = 0.2 %}
       {% set setpoint = inputs['heatpump_setpoint'] | float(20) %}
-      {% set min_c = inputs['mirror_min_c'] | float(-50) %}
-      {% set max_c = inputs['mirror_max_c'] | float(50) %}
+      {% set min_c = 10 %}
+      {% set max_c = 26 %}
 
       {% set comfort_min = [r1, r2] | select('number') | list | min(default=none) %}
       {% set comfort_satisfied = (r1 is number) and (r2 is number) and
@@ -33,10 +32,8 @@ cards:
           (r2 >= (comfort_target - comfort_margin)) %}
 
       {% set storage_target = inputs['storage_target_c'] | float(25) %}
-      {% set storage_cap = inputs['storage_cap_c'] | float(25) %}
       {% set storage_needs_heat = (storage_temp is number) and
           (storage_temp < (storage_target - comfort_margin)) %}
-      {% set storage_cap_heatpump = storage_cap - storage_offset %}
 
       {% set boost_raw = 0 %}
       {% if outdoor_temp is number and outdoor_temp < (inputs['cold_threshold'] | float(0)) %}
@@ -44,35 +41,23 @@ cards:
             / (inputs['boost_slope_c'] | float(5)) %}
       {% endif %}
       {% set boost_clamped = [inputs['max_boost'] | float(3), boost_raw] | min %}
-      {% set boost = 0 %}
-      {% if comfort_min is number and comfort_min < (comfort_target + warm_margin) %}
-        {% set boost = boost_clamped %}
-      {% endif %}
+      {% set boost = boost_clamped %}
 
       {% set base_heatpump_target = comfort_target - comfort_offset %}
       {% set comfort_target_unclamped = base_heatpump_target + boost %}
       {% set storage_target_unclamped = (storage_target - storage_offset) + boost %}
-      {% set comfort_target_capped = [comfort_target_unclamped, storage_cap_heatpump] | min %}
-      {% set storage_target_capped = [storage_target_unclamped, storage_cap_heatpump] | min %}
 
       {% set maintenance_target = inputs['maintenance_target_c'] | float(20) %}
       {% set maintenance_min = inputs['maintenance_min_c'] | float(19) %}
-      {% set direct_min = inputs['direct_electric_min_c'] | float(18) %}
-      {% set effective_min = direct_min %}
 
-      {% set target_unclamped = comfort_target_capped %}
+      {% set target_unclamped = comfort_target_unclamped %}
       {% if comfort_satisfied and storage_needs_heat %}
-        {% set target_unclamped = [storage_target_capped, comfort_target_capped] | max %}
+        {% set target_unclamped = [storage_target_unclamped, comfort_target_unclamped] | max %}
       {% elif comfort_satisfied %}
         {% set target_unclamped = maintenance_target %}
       {% endif %}
 
-      {% set target_min_applied = target_unclamped %}
-      {% if comfort_satisfied %}
-        {% set target_min_applied = [target_unclamped, effective_min] | max %}
-      {% endif %}
-
-      {% set target_off = [max_c, [min_c, target_min_applied] | max] | min %}
+      {% set target_off = [max_c, [min_c, target_unclamped] | max] | min %}
 
       {% set energy_saving_on = is_state(inputs['energy_saving_boolean'], 'on') %}
       {% set warm_shutdown = inputs['energy_saving_warm_shutdown_outdoor'] | float(7) %}
@@ -116,7 +101,6 @@ cards:
       **Control (current)**: {{ control_temp | round(2) if control_temp is number else 'unknown' }} C
 
       **Maintenance target/min**: {{ maintenance_target | round(2) }} C / {{ maintenance_min | round(2) }} C
-      **Direct electric min**: {{ direct_min | round(2) }} C
       **Fallback eligible now**: {{ 'yes' if fallback_eligible else 'no' }}
       **Fallback cooldown remaining**: {{ cooldown_remaining_min }} min
 

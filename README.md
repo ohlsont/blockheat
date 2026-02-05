@@ -21,7 +21,7 @@ plus outdoor temperature and three room sensors (two comfort rooms + storage).
 
 ### Context
 - Two comfort rooms are controlled to the same target temperature.
-- A storage/buffer room can store heat and is capped to avoid overheating.
+- A storage/buffer room can store heat based on its target.
 - Outdoor temperature is used to increase heating effort when needed.
 - The heatpump setpoint is 20 °C by default.
 
@@ -31,7 +31,7 @@ plus outdoor temperature and three room sensors (two comfort rooms + storage).
   - Apply boost, but suppress it if the coldest comfort room is already warm.
   - Maintain comfort until both comfort rooms are satisfied, then drop to
     maintenance target unless the storage room is below its target.
-  - Storage room is monitored and capped, but does not stop comfort heating.
+  - Storage room is monitored, but does not stop comfort heating.
   - Clamp to min/max and only write if the change is significant.
 
 - **Energy saving = ON**
@@ -45,15 +45,14 @@ plus outdoor temperature and three room sensors (two comfort rooms + storage).
 - Cold boost threshold: 0 °C
 - Max boost: +3 °C
 - Boost slope: 1 °C boost per 5 °C drop
-- Indoor warm margin: 0.3 °C
 - Warm shutdown threshold (energy saving): 7 °C
 - Comfort target: 22 °C
 - Comfort → heatpump offset: 2 °C
 - Storage → heatpump offset: 2 °C
-- Storage cap: 25 °C
 - Storage target: 25 °C
 - Maintenance target/min: 20 °C / 19 °C
-- Electric assist: 30 min below target by 0.5 °C, min control 18 °C
+- Electric assist: 30 min below target by 0.5 °C
+- Control temperature limits: 10 °C .. 26 °C
 
 ### Example
 - Outdoor = -10 °C
@@ -71,17 +70,14 @@ flowchart TD
 
   B -- No --> F["Compute cold boost from outdoor temp"]
   F --> G["Clamp boost to max"]
-  G --> H{"Comfort min >= setpoint + warm margin?"}
-  H -- Yes --> I["Boost = 0"]
-  H -- No --> J["Boost = clamped value"]
-  I --> K["Target = setpoint + boost"]
-  J --> K
+  G --> H["Boost = clamped value"]
+  H --> K["Target = setpoint + boost"]
   K --> L{"Comfort rooms satisfied?"}
   L -- Yes --> M["Target = maintenance temp (min = direct electric)"]
-  L -- No --> N["Target = comfort temp (storage capped)"]
+  L -- No --> N["Target = comfort temp"]
   M --> O["Clamp target to min/max"]
   N --> O
-  O --> P["Write target if delta >= min_write_delta"]
+  O --> P["Write target if delta >= 0.2"]
 ```
 
 ### Electric Assist
@@ -89,7 +85,8 @@ The blueprint can allow a lower control temperature to trigger direct electric
 heating when the compressor cannot keep up. It activates only after the coldest
 comfort room has been below target by the configured delta for the configured
 duration.
-Electric assist is always allowed when the fallback criteria are met.
+Electric assist is always allowed when the fallback criteria are met, and it
+drives the control temperature down to the configured mirror minimum.
 The cooldown is enforced using an input_datetime helper configured in the
 blueprint inputs.
 

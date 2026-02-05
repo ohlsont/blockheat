@@ -3,13 +3,19 @@
 ## Requirements
 - Update block-heat blueprint to support two comfort rooms (min-of-rooms reference).
 - Add storage/buffer room sensor with cap (default 25 C), not used for maintenance gating.
+- Remove storage room cap; rely on storage target only.
 - Maintain comfort target (default 22 C) until both comfort rooms are satisfied.
 - Add comfort-to-heatpump offset input (default 2 C).
+- Fix comfort satisfied margin at 0.2 C (no input).
 - Add storage-to-heatpump offset input (default 2 C).
 - Drop to maintenance target (default 20 C) when comfort rooms satisfied.
 - Enforce maintenance minimum (default 19 C) unless electric assist is allowed.
 - Add optional electric assist fallback after 30 minutes below target by 0.5 C, allow min 18 C.
 - Electric assist fallback should always be allowed; remove toggle.
+- Remove direct electric minimum; fallback can drive to mirror minimum.
+- Remove warm margin; cold boost is always applied based on outdoor temperature.
+- Remove min write delta input; hardcode threshold at 0.2 °C.
+- Remove limits inputs; clamp control temperature to 10..26 °C.
 - Enforce electric assist cooldown using input_datetime helper (no delay-based cooldown).
 - Allow storage room target to drive heating when comfort rooms are satisfied.
 - Keep Energy Saving Policy override behavior unchanged.

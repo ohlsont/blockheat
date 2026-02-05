@@ -171,17 +171,6 @@ blueprint:
           step: 0.5
           unit_of_measurement: "°C"
 
-    storage_cap_c:
-      name: Comfort — Storage room cap (°C)
-      description: Maximum temperature for the storage/buffer room
-      default: 25
-      selector:
-        number:
-          min: 10
-          max: 40
-          step: 0.5
-          unit_of_measurement: "°C"
-
     storage_target_c:
       name: Comfort — Storage room target (°C)
       description: Target temperature for the storage/buffer room
@@ -191,17 +180,6 @@ blueprint:
           min: 10
           max: 40
           step: 0.5
-          unit_of_measurement: "°C"
-
-    comfort_satisfied_margin_c:
-      name: Comfort — Satisfied margin (°C)
-      description: Margin below target to consider a room satisfied
-      default: 0.2
-      selector:
-        number:
-          min: 0
-          max: 2
-          step: 0.1
           unit_of_measurement: "°C"
 
     maintenance_target_c:
@@ -222,17 +200,6 @@ blueprint:
       selector:
         number:
           min: 10
-          max: 30
-          step: 0.5
-          unit_of_measurement: "°C"
-
-    direct_electric_min_c:
-      name: Electric assist — Minimum control temperature (°C)
-      description: Control temperature allowed to intentionally trigger direct electric assist
-      default: 18.0
-      selector:
-        number:
-          min: 5
           max: 30
           step: 0.5
           unit_of_measurement: "°C"
@@ -313,17 +280,6 @@ blueprint:
           step: 1
           unit_of_measurement: "°C"
 
-    warm_margin:
-      name: Cold boost — Indoor warm margin (°C)
-      description: Suppress cold-boost when indoor temp >= setpoint + margin
-      default: 0.3
-      selector:
-        number:
-          min: 0
-          max: 2
-          step: 0.1
-          unit_of_measurement: "°C"
-
     section_timing:
       name: "Section — Timing"
       description: " "
@@ -350,46 +306,6 @@ blueprint:
       selector:
         text:
 
-    min_write_delta:
-      name: Safety — Minimum change to write (°C)
-      description: Only update if the difference from current value is at least this much
-      default: 0.2
-      selector:
-        number:
-          min: 0
-          max: 2
-          step: 0.1
-          unit_of_measurement: "°C"
-
-    section_limits:
-      name: "Section — Limits"
-      description: " "
-      default: "Limits"
-      selector:
-        text:
-
-    mirror_min_c:
-      name: Limits — Control temperature minimum (°C)
-      description: Do not set control temperature below this value
-      default: -50
-      selector:
-        number:
-          min: -60
-          max: 30
-          step: 0.5
-          unit_of_measurement: "°C"
-
-    mirror_max_c:
-      name: Limits — Control temperature maximum (°C)
-      description: Do not set control temperature above this value
-      default: 50
-      selector:
-        number:
-          min: 0
-          max: 60
-          step: 0.5
-          unit_of_measurement: "°C"
-
 mode: restart
 max_exceeded: silent
 
@@ -406,12 +322,9 @@ variables:
   comfort_target_c: !input comfort_target_c
   comfort_to_heatpump_offset_c: !input comfort_to_heatpump_offset_c
   storage_to_heatpump_offset_c: !input storage_to_heatpump_offset_c
-  storage_cap_c: !input storage_cap_c
   storage_target_c: !input storage_target_c
-  comfort_satisfied_margin_c: !input comfort_satisfied_margin_c
   maintenance_target_c: !input maintenance_target_c
   maintenance_min_c: !input maintenance_min_c
-  direct_electric_min_c: !input direct_electric_min_c
   electric_fallback_minutes: !input electric_fallback_minutes
   electric_fallback_delta_c: !input electric_fallback_delta_c
   electric_fallback_cooldown_minutes: !input electric_fallback_cooldown_minutes
@@ -419,11 +332,7 @@ variables:
   cold_threshold: !input cold_threshold
   max_boost: !input max_boost
   boost_slope_c: !input boost_slope_c
-  warm_margin: !input warm_margin
   refresh_temperature_delay: !input refresh_temperature_delay
-  min_write_delta: !input min_write_delta
-  mirror_min_c: !input mirror_min_c
-  mirror_max_c: !input mirror_max_c
 
 trigger:
   # React fast to policy changes
@@ -473,8 +382,8 @@ action:
               outdoor_temp: "{{ states(outdoor_temperature_sensor) | float(default=none) }}"
               cur_ctrl: "{{ states(controll_sensor) | float(default=none) }}"
               setpoint: "{{ heatpump_setpoint | float }}"
-              min_c: "{{ mirror_min_c | float(-50) }}"
-              max_c: "{{ mirror_max_c | float(50) }}"
+              min_c: 10
+              max_c: 26
               warm_shutdown: "{{ energy_saving_warm_shutdown_outdoor | float }}"
               cold_target: "{{ (setpoint - 1) | float }}"
               target_unclamped: >-
@@ -495,7 +404,7 @@ action:
                   - condition: template
                     value_template: >-
                       {{ cur_ctrl is number and target is number and
-                         (cur_ctrl - target) | abs >= (min_write_delta | float) }}
+                         (cur_ctrl - target) | abs >= 0.2 }}
                 sequence:
                   - service: number.set_value
                     target:
@@ -521,16 +430,16 @@ action:
                 sequence:
                   - variables:
                       cur_ctrl: "{{ states(controll_sensor) | float(default=none) }}"
-                      min_c: "{{ mirror_min_c | float(-50) }}"
-                      max_c: "{{ mirror_max_c | float(50) }}"
-                      target_unclamped: "{{ direct_electric_min_c | float(18) }}"
+                      min_c: 10
+                      max_c: 26
+                      target_unclamped: "{{ min_c }}"
                       target: "{{ [max_c, [min_c, target_unclamped] | max] | min }}"
                   - choose:
                       - conditions:
                           - condition: template
                             value_template: >-
                               {{ target is number and cur_ctrl is number and
-                                 (target - cur_ctrl) | abs >= (min_write_delta | float) }}
+                                 (target - cur_ctrl) | abs >= 0.2 }}
                         sequence:
                           - service: number.set_value
                             target:
@@ -561,21 +470,18 @@ action:
                         comfort_offset: "{{ comfort_to_heatpump_offset_c | float(2) }}"
                         storage_offset: "{{ storage_to_heatpump_offset_c | float(2) }}"
                         base_heatpump_target: "{{ comfort_target - comfort_offset }}"
-                        comfort_margin: "{{ comfort_satisfied_margin_c | float(0.2) }}"
+                        comfort_margin: 0.2
                         comfort_satisfied: >-
                           {{ room1_temp is number and room2_temp is number and
                              room1_temp >= (comfort_target - comfort_margin) and
                              room2_temp >= (comfort_target - comfort_margin) }}
                         outdoor_temp: "{{ states(outdoor_temperature_sensor) | float(default=none) }}"
                         cur_ctrl: "{{ states(controll_sensor) | float(default=none) }}"
-                        min_c: "{{ mirror_min_c | float(-50) }}"
-                        max_c: "{{ mirror_max_c | float(50) }}"
+                        min_c: 10
+                        max_c: 26
                         maint_target: "{{ maintenance_target_c | float(20) }}"
                         maint_min: "{{ maintenance_min_c | float(19) }}"
-                        direct_min: "{{ direct_electric_min_c | float(18) }}"
-                        storage_cap: "{{ storage_cap_c | float(25) }}"
                         storage_target: "{{ storage_target_c | float(25) }}"
-                        effective_min: "{{ direct_min }}"
                         boost_raw: >-
                           {% if outdoor_temp is number and outdoor_temp < (cold_threshold | float) %}
                             {{ ((cold_threshold | float) - outdoor_temp) / (boost_slope_c | float(5)) }}
@@ -583,43 +489,27 @@ action:
                             0
                           {% endif %}
                         boost_clamped: "{{ [max_boost | float, boost_raw | float] | min }}"
-                        boost: >-
-                          {% if comfort_min is number and comfort_min >= (comfort_target + (warm_margin | float)) %}
-                            0
-                          {% else %}
-                            {{ boost_clamped }}
-                          {% endif %}
+                        boost: "{{ boost_clamped }}"
                         comfort_target_unclamped: "{{ base_heatpump_target + (boost | float) }}"
                         storage_target_unclamped: >-
                           {{ (storage_target - storage_offset) + (boost | float) }}
                         storage_needs_heat: >-
                           {{ storage_temp is number and storage_temp < (storage_target - comfort_margin) }}
-                        storage_cap_heatpump: "{{ storage_cap - storage_offset }}"
-                        comfort_target_capped: >-
-                          {{ [comfort_target_unclamped, storage_cap_heatpump] | min }}
-                        storage_target_capped: >-
-                          {{ [storage_target_unclamped, storage_cap_heatpump] | min }}
                         target_unclamped: >-
                           {% if comfort_satisfied and storage_needs_heat %}
-                            {{ [storage_target_capped, comfort_target_capped] | max }}
+                            {{ [storage_target_unclamped, comfort_target_unclamped] | max }}
                           {% elif comfort_satisfied %}
                             {{ maint_target }}
                           {% else %}
-                            {{ comfort_target_capped }}
+                            {{ comfort_target_unclamped }}
                           {% endif %}
-                        target_min_applied: >-
-                          {% if comfort_satisfied %}
-                            {{ [target_unclamped, effective_min] | max }}
-                          {% else %}
-                            {{ target_unclamped }}
-                          {% endif %}
-                        target: "{{ [max_c, [min_c, target_min_applied] | max] | min }}"
+                        target: "{{ [max_c, [min_c, target_unclamped] | max] | min }}"
                     - choose:
                         - conditions:
                             - condition: template
                               value_template: >-
                                 {{ target is number and cur_ctrl is number and
-                                   (target - cur_ctrl) | abs >= (min_write_delta | float) }}
+                                   (target - cur_ctrl) | abs >= 0.2 }}
                           sequence:
                             - service: number.set_value
                               target:
@@ -633,6 +523,6 @@ action:
               name: Block Heat
               message: >-
                 Energy saving = OFF → cold-boost control every
-                {{ refresh_temperature_delay }} min (clamped {{ mirror_min_c }}..{{ mirror_max_c }} °C)
+                {{ refresh_temperature_delay }} min (clamped 10..26 °C)
 
     default: []

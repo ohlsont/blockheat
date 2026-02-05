@@ -91,6 +91,83 @@
 - Actions taken:
   - Manually reviewed fallback trigger, maintenance clamp, and target selection logic.
 
+## Session: 2026-02-05 (Remove Storage Cap)
+
+### Phase 3: Implementation
+- **Status:** complete
+- Actions taken:
+  - Removed storage room cap input and related clamping logic.
+  - Updated diagnostics card and README to match target-only behavior.
+- Files created/modified:
+  - blueprints/automation/blockheat/block-heat.yaml (updated)
+  - dashboards/blockheat/block-heat-diagnostics-card.yaml (updated)
+  - README.md (updated)
+  - findings.md (updated)
+
+## Session: 2026-02-05 (Fixed Comfort Satisfied Margin)
+
+### Phase 3: Implementation
+- **Status:** complete
+- Actions taken:
+  - Removed comfort satisfied margin input; fixed margin at 0.2 C.
+  - Updated diagnostics card to match fixed margin.
+- Files created/modified:
+  - blueprints/automation/blockheat/block-heat.yaml (updated)
+  - dashboards/blockheat/block-heat-diagnostics-card.yaml (updated)
+  - findings.md (updated)
+
+## Session: 2026-02-05 (Remove Direct Electric Minimum)
+
+### Phase 3: Implementation
+- **Status:** complete
+- Actions taken:
+  - Removed direct electric minimum input and maintenance clamp.
+  - Updated fallback to drive control temperature to mirror minimum.
+  - Updated diagnostics card and README text.
+- Files created/modified:
+  - blueprints/automation/blockheat/block-heat.yaml (updated)
+  - dashboards/blockheat/block-heat-diagnostics-card.yaml (updated)
+  - README.md (updated)
+  - findings.md (updated)
+
+## Session: 2026-02-05 (Remove Warm Margin)
+
+### Phase 3: Implementation
+- **Status:** complete
+- Actions taken:
+  - Removed warm margin input and suppression logic for cold boost.
+  - Updated diagnostics card and README flowchart/defaults.
+- Files created/modified:
+  - blueprints/automation/blockheat/block-heat.yaml (updated)
+  - dashboards/blockheat/block-heat-diagnostics-card.yaml (updated)
+  - README.md (updated)
+  - findings.md (updated)
+
+## Session: 2026-02-05 (Hardcode Min Write Delta)
+
+### Phase 3: Implementation
+- **Status:** complete
+- Actions taken:
+  - Removed min write delta input and fixed write threshold at 0.2.
+  - Updated README flowchart label to match fixed threshold.
+- Files created/modified:
+  - blueprints/automation/blockheat/block-heat.yaml (updated)
+  - README.md (updated)
+  - findings.md (updated)
+
+## Session: 2026-02-05 (Hardcode Control Temperature Limits)
+
+### Phase 3: Implementation
+- **Status:** complete
+- Actions taken:
+  - Removed min/max limit inputs and hardcoded control temp clamp to 10..26 °C.
+  - Updated diagnostics card and README defaults.
+- Files created/modified:
+  - blueprints/automation/blockheat/block-heat.yaml (updated)
+  - dashboards/blockheat/block-heat-diagnostics-card.yaml (updated)
+  - README.md (updated)
+  - findings.md (updated)
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
