@@ -92,6 +92,19 @@ for the configured duration, and is disabled by default.
 The cooldown is enforced using an input_datetime helper configured in the
 blueprint inputs.
 
+### Diagnostics Card (Dashboard)
+A screenshot-friendly diagnostics card is available at:
+- `dashboards/blockheat/block-heat-diagnostics-card.yaml`
+
+To use it:
+1. Copy the YAML into a Lovelace manual card or view YAML editor.
+2. Replace the `auto` value in the markdown card with your automation entity id.
+3. Replace the placeholder entity ids in the entities list with your actual sensors.
+
+The markdown block computes the same target logic as the blueprint so you can
+verify comfort status, cold-boost, storage behavior, and electric fallback
+eligibility at a glance.
+
 ## Daikin Energy Saver (Policy-Driven)
 This blueprint targets a Daikin climate entity and switches between a normal
 temperature and a saving temperature based on the Energy Saving Policy boolean,

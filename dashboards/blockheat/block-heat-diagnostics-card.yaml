@@ -1,0 +1,145 @@
+# Block Heat diagnostics card (Lovelace)
+# Replace the automation id and entity placeholders before use.
+# Paste this into a manual card or a view YAML editor.
+
+type: vertical-stack
+cards:
+  - type: markdown
+    title: Block Heat Diagnostics
+    content: |
+      {% set auto = 'automation.block_heat' %}
+      {% set inputs = state_attr(auto, 'blueprint_input') %}
+      {% if inputs is none %}
+      Set `auto` to your automation entity id (for example `automation.block_heat`).
+      {% else %}
+      {% set r1 = states(inputs['comfort_room_1_sensor']) | float(default=none) %}
+      {% set r2 = states(inputs['comfort_room_2_sensor']) | float(default=none) %}
+      {% set storage_temp = states(inputs['storage_room_sensor']) | float(default=none) %}
+      {% set outdoor_temp = states(inputs['outdoor_temperature_sensor']) | float(default=none) %}
+      {% set control_temp = states(inputs['controll_sensor']) | float(default=none) %}
+
+      {% set comfort_target = inputs['comfort_target_c'] | float(22) %}
+      {% set comfort_offset = inputs['comfort_to_heatpump_offset_c'] | float(2) %}
+      {% set storage_offset = inputs['storage_to_heatpump_offset_c'] | float(2) %}
+      {% set comfort_margin = inputs['comfort_satisfied_margin_c'] | float(0.2) %}
+      {% set warm_margin = inputs['warm_margin'] | float(0.3) %}
+      {% set setpoint = inputs['heatpump_setpoint'] | float(20) %}
+      {% set min_c = inputs['mirror_min_c'] | float(-50) %}
+      {% set max_c = inputs['mirror_max_c'] | float(50) %}
+
+      {% set comfort_min = [r1, r2] | select('number') | list | min(default=none) %}
+      {% set comfort_satisfied = (r1 is number) and (r2 is number) and
+          (r1 >= (comfort_target - comfort_margin)) and
+          (r2 >= (comfort_target - comfort_margin)) %}
+
+      {% set storage_target = inputs['storage_target_c'] | float(25) %}
+      {% set storage_cap = inputs['storage_cap_c'] | float(25) %}
+      {% set storage_needs_heat = (storage_temp is number) and
+          (storage_temp < (storage_target - comfort_margin)) %}
+      {% set storage_cap_heatpump = storage_cap - storage_offset %}
+
+      {% set boost_raw = 0 %}
+      {% if outdoor_temp is number and outdoor_temp < (inputs['cold_threshold'] | float(0)) %}
+        {% set boost_raw = ((inputs['cold_threshold'] | float(0)) - outdoor_temp)
+            / (inputs['boost_slope_c'] | float(5)) %}
+      {% endif %}
+      {% set boost_clamped = [inputs['max_boost'] | float(3), boost_raw] | min %}
+      {% set boost = 0 %}
+      {% if comfort_min is number and comfort_min < (comfort_target + warm_margin) %}
+        {% set boost = boost_clamped %}
+      {% endif %}
+
+      {% set base_heatpump_target = comfort_target - comfort_offset %}
+      {% set comfort_target_unclamped = base_heatpump_target + boost %}
+      {% set storage_target_unclamped = (storage_target - storage_offset) + boost %}
+      {% set comfort_target_capped = [comfort_target_unclamped, storage_cap_heatpump] | min %}
+      {% set storage_target_capped = [storage_target_unclamped, storage_cap_heatpump] | min %}
+
+      {% set maintenance_target = inputs['maintenance_target_c'] | float(20) %}
+      {% set maintenance_min = inputs['maintenance_min_c'] | float(19) %}
+      {% set allow_direct = inputs['allow_direct_electric'] | bool %}
+      {% set direct_min = inputs['direct_electric_min_c'] | float(18) %}
+      {% set effective_min = direct_min if allow_direct else maintenance_min %}
+
+      {% set target_unclamped = comfort_target_capped %}
+      {% if comfort_satisfied and storage_needs_heat %}
+        {% set target_unclamped = [storage_target_capped, comfort_target_capped] | max %}
+      {% elif comfort_satisfied %}
+        {% set target_unclamped = maintenance_target %}
+      {% endif %}
+
+      {% set target_min_applied = target_unclamped %}
+      {% if comfort_satisfied %}
+        {% set target_min_applied = [target_unclamped, effective_min] | max %}
+      {% endif %}
+
+      {% set target_off = [max_c, [min_c, target_min_applied] | max] | min %}
+
+      {% set energy_saving_on = is_state(inputs['energy_saving_boolean'], 'on') %}
+      {% set warm_shutdown = inputs['energy_saving_warm_shutdown_outdoor'] | float(7) %}
+      {% set virtual_temperature = inputs['virtual_temperature'] | float(20) %}
+
+      {% if outdoor_temp is number and outdoor_temp >= warm_shutdown %}
+        {% set target_unclamped_on = virtual_temperature %}
+        {% set mode_detail_on = 'warm shutdown (virtual block)' %}
+      {% else %}
+        {% set target_unclamped_on = setpoint - 1 %}
+        {% set mode_detail_on = 'cold mode (setpoint - 1)' %}
+      {% endif %}
+      {% set target_on = [max_c, [min_c, target_unclamped_on] | max] | min %}
+
+      {% set last_ts = as_timestamp(states(inputs['electric_fallback_last_trigger'])) | float(0) %}
+      {% set now_ts = now().timestamp() %}
+      {% set cooldown_sec = (inputs['electric_fallback_cooldown_minutes'] | float(60)) * 60 %}
+      {% set cooldown_remaining = [0, (cooldown_sec - (now_ts - last_ts))] | max %}
+      {% set cooldown_remaining_min = (cooldown_remaining / 60) | round(1) %}
+      {% set cooldown_ok = (now_ts - last_ts) >= cooldown_sec %}
+
+      {% set fallback_delta = inputs['electric_fallback_delta_c'] | float(0.5) %}
+      {% set fallback_eligible = (not energy_saving_on) and allow_direct and
+          (comfort_min is number) and (comfort_min < (comfort_target - fallback_delta)) and cooldown_ok %}
+
+      **Mode**: {{ 'Energy saving ON' if energy_saving_on else 'Energy saving OFF' }}
+      {% if energy_saving_on %}
+      **Mode detail**: {{ mode_detail_on }}
+      **Target (ON)**: {{ target_on | round(2) }} C
+      {% else %}
+      **Target (OFF)**: {{ target_off | round(2) }} C
+      {% endif %}
+
+      **Comfort**: min {{ comfort_min | round(2) if comfort_min is number else 'unknown' }} C
+      **Comfort satisfied**: {{ 'yes' if comfort_satisfied else 'no' }}
+      **Storage**: {{ storage_temp | round(2) if storage_temp is number else 'unknown' }} C
+      **Storage needs heat**: {{ 'yes' if storage_needs_heat else 'no' }}
+
+      **Boost**: {{ boost | round(2) }} C
+      **Outdoor**: {{ outdoor_temp | round(2) if outdoor_temp is number else 'unknown' }} C
+      **Control (current)**: {{ control_temp | round(2) if control_temp is number else 'unknown' }} C
+
+      **Maintenance target/min**: {{ maintenance_target | round(2) }} C / {{ maintenance_min | round(2) }} C
+      **Direct electric allowed**: {{ 'yes' if allow_direct else 'no' }}
+      **Direct electric min**: {{ direct_min | round(2) }} C
+      **Fallback eligible now**: {{ 'yes' if fallback_eligible else 'no' }}
+      **Fallback cooldown remaining**: {{ cooldown_remaining_min }} min
+
+      _Note: fallback eligibility reflects the current condition only; the configured
+      timer must still run for the full duration._
+      {% endif %}
+
+  - type: entities
+    title: Block Heat Entities (replace with yours)
+    entities:
+      - entity: input_boolean.REPLACE_energy_saving
+        name: Energy saving boolean
+      - entity: sensor.REPLACE_comfort_room_1
+        name: Comfort room 1
+      - entity: sensor.REPLACE_comfort_room_2
+        name: Comfort room 2
+      - entity: sensor.REPLACE_storage_room
+        name: Storage room
+      - entity: sensor.REPLACE_outdoor
+        name: Outdoor
+      - entity: number.REPLACE_control_temperature
+        name: Control temperature
+      - entity: input_datetime.REPLACE_fallback_last_trigger
+        name: Electric fallback last trigger

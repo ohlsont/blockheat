@@ -46,6 +46,33 @@
 - Files created/modified:
   - none
 
+## Session: 2026-02-05 (Diagnostics Card)
+
+### Phase 1: Requirements & Discovery
+- **Status:** complete
+- Actions taken:
+  - Reviewed block-heat blueprint inputs and logic for diagnostics calculations.
+  - Confirmed blueprint inputs accessible via automation `blueprint_input`.
+- Files created/modified:
+  - task_plan.md (updated)
+  - findings.md (updated)
+
+### Phase 2: Planning & Structure
+- **Status:** complete
+- Actions taken:
+  - Drafted diagnostics layout and computed metrics.
+- Files created/modified:
+  - task_plan.md (updated)
+
+### Phase 3: Implementation
+- **Status:** complete
+- Actions taken:
+  - Created a Lovelace diagnostics card with computed values.
+  - Added README guidance for the new diagnostics card.
+- Files created/modified:
+  - dashboards/blockheat/block-heat-diagnostics-card.yaml (created)
+  - README.md (updated)
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|
@@ -55,6 +82,7 @@
 | Timestamp | Error | Attempt | Resolution |
 |-----------|-------|---------|------------|
 | 2026-02-05 | uv run python session-catchup cache permission error | 1 | Reran with escalation |
+| 2026-02-05 | rg not available in shell | 1 | Used grep instead |
 
 ## 5-Question Reboot Check
 | Question | Answer |

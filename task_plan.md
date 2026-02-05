@@ -1,61 +1,57 @@
-# Task Plan: Three-room heatpump control blueprint updates
+# Task Plan: Block Heat diagnostics dashboard card
 
 ## Goal
-Implement a three-room (two comfort + storage) control model with maintenance gating and optional electric-assist fallback, update documentation, and persist key system notes.
+Create a Home Assistant dashboard diagnostics card for the Block Heat blueprint, with clear computed feedback for screenshots, and document how to use it.
 
 ## Current Phase
-Phase 3
+Phase 4
 
 ## Phases
 
 ### Phase 1: Requirements & Discovery
-- [x] Understand user intent
-- [x] Identify constraints and requirements
+- [x] Confirm desired output (dashboard card for diagnostics)
+- [x] Review blueprint inputs and logic for derived values
 - [x] Document findings in findings.md
 - **Status:** complete
 
 ### Phase 2: Planning & Structure
-- [x] Define technical approach
-- [x] Create project structure if needed
+- [x] Define diagnostics metrics and layout
+- [x] Decide where to store card YAML
 - [x] Document decisions with rationale
 - **Status:** complete
 
 ### Phase 3: Implementation
-- [x] Execute the plan step by step
-- [x] Write code to files before executing
-- [x] Test incrementally
+- [x] Create diagnostics card YAML
+- [x] Add README instructions and usage notes
+- [x] Keep changes minimal and focused
 - **Status:** complete
 
 ### Phase 4: Testing & Verification
-- [ ] Verify all requirements met
-- [ ] Document test results in progress.md
-- [ ] Fix any issues found
+- [ ] Manual review of formulas against blueprint
+- [ ] Document verification notes in progress.md
 - **Status:** pending
 
 ### Phase 5: Delivery
-- [x] Review all output files
-- [x] Ensure deliverables are complete
-- [x] Deliver to user
-- **Status:** complete
+- [ ] Summarize changes and next steps
+- **Status:** pending
 
 ## Key Questions
-1. How should comfort rooms be referenced for control? (Min-of-rooms)
-2. Should storage room gate maintenance? (No, cap only)
-3. When to allow direct electric assist? (After 30 min below target by 0.5 C, min 18 C)
+1. Where should the diagnostics card live? (New YAML under blueprints/automation/blockheat/)
+2. Should we avoid custom Lovelace cards? (Yes, use built-in markdown/entities)
+3. What automation entity id will be used? (User will replace placeholder)
 
 ## Decisions Made
 | Decision | Rationale |
 |----------|-----------|
-| Use min of two comfort rooms as control reference | Keeps coldest comfort room on target |
-| Storage room is cap/monitor only | Avoids blocking comfort heating while buffering cold snaps |
-| Maintenance target 20 C, minimum 19 C | Avoid direct electric unless explicitly enabled |
-| Optional electric assist fallback | Compressor may be insufficient during cold snaps |
-| Electric assist trigger: 30 min below target by 0.5 C, min 18 C | User provided parameters |
+| Use markdown card templates for computed values | Built-in HA capability, no custom cards |
+| Provide entity list as placeholders | Entities card does not accept templates |
+| Store card YAML under dashboards/ | Keeps blueprint folder clean and intent clear |
+| Read blueprint inputs from `blueprint_input` | Keeps card in sync with automation setup |
 
 ## Errors Encountered
 | Error | Attempt | Resolution |
 |-------|---------|------------|
-| uv run python session-catchup failed due to cache permissions | 1 | Reran with escalation; succeeded |
+| rg not available in shell | 1 | Used grep instead |
 
 ## Notes
 - Update phase status as you progress: pending → in_progress → complete

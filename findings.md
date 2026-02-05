@@ -40,5 +40,11 @@
 - Documentation: README.md
 - System notes: memory.md
 
+## Diagnostics Card Findings
+- Blueprint inputs are available on the automation entity via the `blueprint_input` attribute.
+- Lovelace markdown cards can render Jinja templates, which lets us compute diagnostics inline.
+- Entities cards do not accept templates for entity ids, so the entity list must be manually filled in.
+- Prefer built-in cards over custom cards to reduce setup friction.
+
 ## Visual/Browser Findings
 - Manual specifies PT100 external room sensor wiring and notes compressor value increases are delayed (~3 min) while decreases are immediate.
