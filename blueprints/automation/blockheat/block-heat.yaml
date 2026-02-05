@@ -550,97 +550,97 @@ action:
                       entity_id: !input electric_fallback_last_trigger
                     data:
                       timestamp: "{{ now().timestamp() | int }}"
-              - default:
-                  - alias: Control while energy saving stays OFF
-                    repeat:
-                      until:
-                        - condition: state
-                          entity_id: !input energy_saving_boolean
-                          state: "on"
-                      sequence:
-                        - variables:
-                            room1_temp: "{{ states(comfort_room_1_sensor) | float(default=none) }}"
-                            room2_temp: "{{ states(comfort_room_2_sensor) | float(default=none) }}"
-                            storage_temp: "{{ states(storage_room_sensor) | float(default=none) }}"
-                            comfort_min: >-
-                              {% set temps = [room1_temp, room2_temp] | select('number') | list %}
-                              {{ temps | min(default=none) }}
-                            comfort_target: "{{ comfort_target_c | float(22) }}"
-                            comfort_offset: "{{ comfort_to_heatpump_offset_c | float(2) }}"
-                            storage_offset: "{{ storage_to_heatpump_offset_c | float(2) }}"
-                            base_heatpump_target: "{{ comfort_target - comfort_offset }}"
-                            comfort_margin: "{{ comfort_satisfied_margin_c | float(0.2) }}"
-                            comfort_satisfied: >-
-                              {{ room1_temp is number and room2_temp is number and
-                                 room1_temp >= (comfort_target - comfort_margin) and
-                                 room2_temp >= (comfort_target - comfort_margin) }}
-                            outdoor_temp: "{{ states(outdoor_temperature_sensor) | float(default=none) }}"
-                            cur_ctrl: "{{ states(controll_sensor) | float(default=none) }}"
-                            min_c: "{{ mirror_min_c | float(-50) }}"
-                            max_c: "{{ mirror_max_c | float(50) }}"
-                            maint_target: "{{ maintenance_target_c | float(20) }}"
-                            maint_min: "{{ maintenance_min_c | float(19) }}"
-                            direct_min: "{{ direct_electric_min_c | float(18) }}"
-                            storage_cap: "{{ storage_cap_c | float(25) }}"
-                            storage_target: "{{ storage_target_c | float(25) }}"
-                            effective_min: >-
-                              {% if allow_direct_electric | bool %}
-                                {{ direct_min }}
-                              {% else %}
-                                {{ maint_min }}
-                              {% endif %}
-                            boost_raw: >-
-                              {% if outdoor_temp is number and outdoor_temp < (cold_threshold | float) %}
-                                {{ ((cold_threshold | float) - outdoor_temp) / (boost_slope_c | float(5)) }}
-                              {% else %}
-                                0
-                              {% endif %}
-                            boost_clamped: "{{ [max_boost | float, boost_raw | float] | min }}"
-                            boost: >-
-                              {% if comfort_min is number and comfort_min >= (comfort_target + (warm_margin | float)) %}
-                                0
-                              {% else %}
-                                {{ boost_clamped }}
-                              {% endif %}
-                            comfort_target_unclamped: "{{ base_heatpump_target + (boost | float) }}"
-                            storage_target_unclamped: >-
-                              {{ (storage_target - storage_offset) + (boost | float) }}
-                            storage_needs_heat: >-
-                              {{ storage_temp is number and storage_temp < (storage_target - comfort_margin) }}
-                            storage_cap_heatpump: "{{ storage_cap - storage_offset }}"
-                            comfort_target_capped: >-
-                              {{ [comfort_target_unclamped, storage_cap_heatpump] | min }}
-                            storage_target_capped: >-
-                              {{ [storage_target_unclamped, storage_cap_heatpump] | min }}
-                            target_unclamped: >-
-                              {% if comfort_satisfied and storage_needs_heat %}
-                                {{ [storage_target_capped, comfort_target_capped] | max }}
-                              {% elif comfort_satisfied %}
-                                {{ maint_target }}
-                              {% else %}
-                                {{ comfort_target_capped }}
-                              {% endif %}
-                            target_min_applied: >-
-                              {% if comfort_satisfied %}
-                                {{ [target_unclamped, effective_min] | max }}
-                              {% else %}
-                                {{ target_unclamped }}
-                              {% endif %}
-                            target: "{{ [max_c, [min_c, target_min_applied] | max] | min }}"
-                        - choose:
-                            - conditions:
-                                - condition: template
-                                  value_template: >-
-                                    {{ target is number and cur_ctrl is number and
-                                       (target - cur_ctrl) | abs >= (min_write_delta | float) }}
-                              sequence:
-                                - service: number.set_value
-                                  target:
-                                    entity_id: !input controll_sensor
-                                  data:
-                                    value: "{{ target }}"
-                        - delay:
-                            minutes: !input refresh_temperature_delay
+            default:
+              - alias: Control while energy saving stays OFF
+                repeat:
+                  until:
+                    - condition: state
+                      entity_id: !input energy_saving_boolean
+                      state: "on"
+                  sequence:
+                    - variables:
+                        room1_temp: "{{ states(comfort_room_1_sensor) | float(default=none) }}"
+                        room2_temp: "{{ states(comfort_room_2_sensor) | float(default=none) }}"
+                        storage_temp: "{{ states(storage_room_sensor) | float(default=none) }}"
+                        comfort_min: >-
+                          {% set temps = [room1_temp, room2_temp] | select('number') | list %}
+                          {{ temps | min(default=none) }}
+                        comfort_target: "{{ comfort_target_c | float(22) }}"
+                        comfort_offset: "{{ comfort_to_heatpump_offset_c | float(2) }}"
+                        storage_offset: "{{ storage_to_heatpump_offset_c | float(2) }}"
+                        base_heatpump_target: "{{ comfort_target - comfort_offset }}"
+                        comfort_margin: "{{ comfort_satisfied_margin_c | float(0.2) }}"
+                        comfort_satisfied: >-
+                          {{ room1_temp is number and room2_temp is number and
+                             room1_temp >= (comfort_target - comfort_margin) and
+                             room2_temp >= (comfort_target - comfort_margin) }}
+                        outdoor_temp: "{{ states(outdoor_temperature_sensor) | float(default=none) }}"
+                        cur_ctrl: "{{ states(controll_sensor) | float(default=none) }}"
+                        min_c: "{{ mirror_min_c | float(-50) }}"
+                        max_c: "{{ mirror_max_c | float(50) }}"
+                        maint_target: "{{ maintenance_target_c | float(20) }}"
+                        maint_min: "{{ maintenance_min_c | float(19) }}"
+                        direct_min: "{{ direct_electric_min_c | float(18) }}"
+                        storage_cap: "{{ storage_cap_c | float(25) }}"
+                        storage_target: "{{ storage_target_c | float(25) }}"
+                        effective_min: >-
+                          {% if allow_direct_electric | bool %}
+                            {{ direct_min }}
+                          {% else %}
+                            {{ maint_min }}
+                          {% endif %}
+                        boost_raw: >-
+                          {% if outdoor_temp is number and outdoor_temp < (cold_threshold | float) %}
+                            {{ ((cold_threshold | float) - outdoor_temp) / (boost_slope_c | float(5)) }}
+                          {% else %}
+                            0
+                          {% endif %}
+                        boost_clamped: "{{ [max_boost | float, boost_raw | float] | min }}"
+                        boost: >-
+                          {% if comfort_min is number and comfort_min >= (comfort_target + (warm_margin | float)) %}
+                            0
+                          {% else %}
+                            {{ boost_clamped }}
+                          {% endif %}
+                        comfort_target_unclamped: "{{ base_heatpump_target + (boost | float) }}"
+                        storage_target_unclamped: >-
+                          {{ (storage_target - storage_offset) + (boost | float) }}
+                        storage_needs_heat: >-
+                          {{ storage_temp is number and storage_temp < (storage_target - comfort_margin) }}
+                        storage_cap_heatpump: "{{ storage_cap - storage_offset }}"
+                        comfort_target_capped: >-
+                          {{ [comfort_target_unclamped, storage_cap_heatpump] | min }}
+                        storage_target_capped: >-
+                          {{ [storage_target_unclamped, storage_cap_heatpump] | min }}
+                        target_unclamped: >-
+                          {% if comfort_satisfied and storage_needs_heat %}
+                            {{ [storage_target_capped, comfort_target_capped] | max }}
+                          {% elif comfort_satisfied %}
+                            {{ maint_target }}
+                          {% else %}
+                            {{ comfort_target_capped }}
+                          {% endif %}
+                        target_min_applied: >-
+                          {% if comfort_satisfied %}
+                            {{ [target_unclamped, effective_min] | max }}
+                          {% else %}
+                            {{ target_unclamped }}
+                          {% endif %}
+                        target: "{{ [max_c, [min_c, target_min_applied] | max] | min }}"
+                    - choose:
+                        - conditions:
+                            - condition: template
+                              value_template: >-
+                                {{ target is number and cur_ctrl is number and
+                                   (target - cur_ctrl) | abs >= (min_write_delta | float) }}
+                          sequence:
+                            - service: number.set_value
+                              target:
+                                entity_id: !input controll_sensor
+                              data:
+                                value: "{{ target }}"
+                    - delay:
+                        minutes: !input refresh_temperature_delay
           - service: logbook.log
             data:
               name: Block Heat
