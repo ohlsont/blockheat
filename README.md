@@ -17,19 +17,21 @@ on policy-driven heating control for different devices and setups.
 
 ## Block Heat (Outdoor-Aware + Efficient Heatpump)
 This blueprint controls a heat pump based on an energy-saving policy boolean
-plus indoor/outdoor temperatures.
+plus outdoor temperature and three room sensors (two comfort rooms + storage).
 
 ### Context
-- The primary indoor sensor is in a bathroom with stone tiles used as thermal
-  storage.
-- Other rooms cool faster when it is very cold outside, so outdoor temperature
-  is used to increase heating effort when needed.
+- Two comfort rooms are controlled to the same target temperature.
+- A storage/buffer room can store heat and is capped to avoid overheating.
+- Outdoor temperature is used to increase heating effort when needed.
 - The heatpump setpoint is 20 °C by default.
 
 ### Behavior Summary
 - **Energy saving = OFF**
   - Compute a cold-boost from outdoor temperature.
-  - Add boost to setpoint, but suppress it if the bathroom is already warm.
+  - Apply boost, but suppress it if the coldest comfort room is already warm.
+  - Maintain comfort until both comfort rooms are satisfied, then drop to
+    maintenance target unless the storage room is below its target.
+  - Storage room is monitored and capped, but does not stop comfort heating.
   - Clamp to min/max and only write if the change is significant.
 
 - **Energy saving = ON**
@@ -45,16 +47,23 @@ plus indoor/outdoor temperatures.
 - Boost slope: 1 °C boost per 5 °C drop
 - Indoor warm margin: 0.3 °C
 - Warm shutdown threshold (energy saving): 7 °C
+- Comfort target: 22 °C
+- Comfort → heatpump offset: 2 °C
+- Storage → heatpump offset: 2 °C
+- Storage cap: 25 °C
+- Storage target: 25 °C
+- Maintenance target/min: 20 °C / 19 °C
+- Electric assist (optional): 30 min below target by 0.5 °C, min control 18 °C
 
 ### Example
 - Outdoor = -10 °C
 - Cold boost = (0 - (-10)) / 5 = 2 °C
-- Target = 20 + 2 = 22 °C (unless bathroom is already warm)
+- Target = 20 + 2 = 22 °C (unless the coldest comfort room is already warm)
 
 ### Flowchart
 ```mermaid
 flowchart TD
-  A["Inputs: energy_saving_boolean, indoor temp, outdoor temp"] --> B{"Energy saving ON?"}
+  A["Inputs: energy_saving_boolean, comfort rooms, storage room, outdoor temp"] --> B{"Energy saving ON?"}
 
   B -- Yes --> C{"Outdoor temp >= warm shutdown?"}
   C -- Yes --> D["Set control temp = virtual temperature<br/>(block heat)"]
@@ -62,14 +71,26 @@ flowchart TD
 
   B -- No --> F["Compute cold boost from outdoor temp"]
   F --> G["Clamp boost to max"]
-  G --> H{"Indoor temp >= setpoint + warm margin?"}
+  G --> H{"Comfort min >= setpoint + warm margin?"}
   H -- Yes --> I["Boost = 0"]
   H -- No --> J["Boost = clamped value"]
   I --> K["Target = setpoint + boost"]
   J --> K
-  K --> L["Clamp target to min/max"]
-  L --> M["Write target if delta >= min_write_delta"]
+  K --> L{"Comfort rooms satisfied?"}
+  L -- Yes --> M["Target = maintenance temp"]
+  L -- No --> N["Target = comfort temp (storage capped)"]
+  M --> O["Clamp target to min/max"]
+  N --> O
+  O --> P["Write target if delta >= min_write_delta"]
 ```
+
+### Electric Assist (Optional)
+If enabled, the blueprint can allow a lower control temperature to trigger
+direct electric heating when the compressor cannot keep up. It activates only
+after the coldest comfort room has been below target by the configured delta
+for the configured duration, and is disabled by default.
+The cooldown is enforced using an input_datetime helper configured in the
+blueprint inputs.
 
 ## Daikin Energy Saver (Policy-Driven)
 This blueprint targets a Daikin climate entity and switches between a normal
