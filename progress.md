@@ -168,6 +168,19 @@
   - README.md (updated)
   - findings.md (updated)
 
+## Session: 2026-02-05 (Remove Maintenance Min + Safety Section)
+
+### Phase 3: Implementation
+- **Status:** complete
+- Actions taken:
+  - Removed maintenance minimum input and empty Safety section header.
+  - Updated diagnostics card and README labels to reflect single maintenance target.
+- Files created/modified:
+  - blueprints/automation/blockheat/block-heat.yaml (updated)
+  - dashboards/blockheat/block-heat-diagnostics-card.yaml (updated)
+  - README.md (updated)
+  - findings.md (updated)
+
 ## Test Results
 | Test | Input | Expected | Actual | Status |
 |------|-------|----------|--------|--------|

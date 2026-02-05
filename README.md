@@ -50,7 +50,7 @@ plus outdoor temperature and three room sensors (two comfort rooms + storage).
 - Comfort → heatpump offset: 2 °C
 - Storage → heatpump offset: 2 °C
 - Storage target: 25 °C
-- Maintenance target/min: 20 °C / 19 °C
+- Maintenance target: 20 °C
 - Electric assist: 30 min below target by 0.5 °C
 - Control temperature limits: 10 °C .. 26 °C
 

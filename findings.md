@@ -16,6 +16,7 @@
 - Remove warm margin; cold boost is always applied based on outdoor temperature.
 - Remove min write delta input; hardcode threshold at 0.2 °C.
 - Remove limits inputs; clamp control temperature to 10..26 °C.
+- Remove maintenance minimum input and safety section header.
 - Enforce electric assist cooldown using input_datetime helper (no delay-based cooldown).
 - Allow storage room target to drive heating when comfort rooms are satisfied.
 - Keep Energy Saving Policy override behavior unchanged.

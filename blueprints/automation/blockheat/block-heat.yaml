@@ -193,17 +193,6 @@ blueprint:
           step: 0.5
           unit_of_measurement: "°C"
 
-    maintenance_min_c:
-      name: Comfort — Maintenance minimum (°C)
-      description: Do not set control temperature below this when holding maintenance
-      default: 19
-      selector:
-        number:
-          min: 10
-          max: 30
-          step: 0.5
-          unit_of_measurement: "°C"
-
     electric_fallback_minutes:
       name: Electric assist — Trigger delay (minutes)
       description: Minutes below target before electric assist can activate
@@ -299,13 +288,6 @@ blueprint:
           unit_of_measurement: Minutes
           mode: slider
 
-    section_safety:
-      name: "Section — Safety"
-      description: " "
-      default: "Safety"
-      selector:
-        text:
-
 mode: restart
 max_exceeded: silent
 
@@ -324,7 +306,6 @@ variables:
   storage_to_heatpump_offset_c: !input storage_to_heatpump_offset_c
   storage_target_c: !input storage_target_c
   maintenance_target_c: !input maintenance_target_c
-  maintenance_min_c: !input maintenance_min_c
   electric_fallback_minutes: !input electric_fallback_minutes
   electric_fallback_delta_c: !input electric_fallback_delta_c
   electric_fallback_cooldown_minutes: !input electric_fallback_cooldown_minutes
@@ -480,7 +461,6 @@ action:
                         min_c: 10
                         max_c: 26
                         maint_target: "{{ maintenance_target_c | float(20) }}"
-                        maint_min: "{{ maintenance_min_c | float(19) }}"
                         storage_target: "{{ storage_target_c | float(25) }}"
                         boost_raw: >-
                           {% if outdoor_temp is number and outdoor_temp < (cold_threshold | float) %}

@@ -48,7 +48,6 @@ cards:
       {% set storage_target_unclamped = (storage_target - storage_offset) + boost %}
 
       {% set maintenance_target = inputs['maintenance_target_c'] | float(20) %}
-      {% set maintenance_min = inputs['maintenance_min_c'] | float(19) %}
 
       {% set target_unclamped = comfort_target_unclamped %}
       {% if comfort_satisfied and storage_needs_heat %}
@@ -100,7 +99,7 @@ cards:
       **Outdoor**: {{ outdoor_temp | round(2) if outdoor_temp is number else 'unknown' }} C
       **Control (current)**: {{ control_temp | round(2) if control_temp is number else 'unknown' }} C
 
-      **Maintenance target/min**: {{ maintenance_target | round(2) }} C / {{ maintenance_min | round(2) }} C
+      **Maintenance target**: {{ maintenance_target | round(2) }} C
       **Fallback eligible now**: {{ 'yes' if fallback_eligible else 'no' }}
       **Fallback cooldown remaining**: {{ cooldown_remaining_min }} min
 
