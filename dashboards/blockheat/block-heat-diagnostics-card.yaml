@@ -1,126 +1,136 @@
-# Block Heat diagnostics card (Lovelace)
-# Replace the automation id and entity placeholders before use.
-# Paste this into a manual card or a view YAML editor.
+# Block Heat diagnostics card (modular architecture)
+# Replace the automation id before use.
+# Optional graph requires the custom component apexcharts-card.
 
 type: vertical-stack
 cards:
   - type: markdown
-    title: Block Heat Diagnostics
+    title: Block Heat Diagnostics (Modular)
     content: |
-      {% set auto = 'automation.block_heat' %}
+      {% set auto = 'automation.block_heat_final' %}
       {% set inputs = state_attr(auto, 'blueprint_input') %}
       {% if inputs is none %}
-      Set `auto` to your automation entity id (for example `automation.block_heat`).
+      Set `auto` to your final arbiter automation entity id.
       {% else %}
-      {% set r1 = states(inputs['comfort_room_1_sensor']) | float(default=none) %}
-      {% set r2 = states(inputs['comfort_room_2_sensor']) | float(default=none) %}
-      {% set storage_temp = states(inputs['storage_room_sensor']) | float(default=none) %}
-      {% set outdoor_temp = states(inputs['outdoor_temperature_sensor']) | float(default=none) %}
-      {% set control_temp = states(inputs['controll_sensor']) | float(default=none) %}
+      {% set policy = inputs['energy_saving_boolean'] %}
+      {% set fallback = inputs['fallback_active_boolean'] %}
+      {% set target_saving_entity = inputs['target_saving_helper'] %}
+      {% set target_comfort_entity = inputs['target_comfort_helper'] %}
+      {% set target_final_entity = inputs['target_final_helper'] %}
+      {% set control_entity = inputs['control_number_entity'] %}
 
-      {% set comfort_target = inputs['comfort_target_c'] | float(22) %}
-      {% set comfort_offset = inputs['comfort_to_heatpump_offset_c'] | float(2) %}
-      {% set storage_offset = inputs['storage_to_heatpump_offset_c'] | float(2) %}
-      {% set comfort_margin = 0.2 %}
-      {% set setpoint = inputs['heatpump_setpoint'] | float(20) %}
-      {% set min_c = 10 %}
-      {% set max_c = 26 %}
+      {% set target_saving = states(target_saving_entity) | float(default=none) %}
+      {% set target_comfort = states(target_comfort_entity) | float(default=none) %}
+      {% set target_final = states(target_final_entity) | float(default=none) %}
+      {% set control_current = states(control_entity) | float(default=none) %}
 
-      {% set comfort_min = [r1, r2] | select('number') | list | min(default=none) %}
-      {% set comfort_satisfied = (r1 is number) and (r2 is number) and
-          (r1 >= (comfort_target - comfort_margin)) and
-          (r2 >= (comfort_target - comfort_margin)) %}
+      {% set policy_saving = is_state(policy, 'on') %}
+      {% set fallback_active = is_state(fallback, 'on') %}
 
-      {% set storage_target = inputs['storage_target_c'] | float(25) %}
-      {% set storage_needs_heat = (storage_temp is number) and
-          (storage_temp < (storage_target - comfort_margin)) %}
-
-      {% set boost_raw = 0 %}
-      {% if outdoor_temp is number and outdoor_temp < (inputs['cold_threshold'] | float(0)) %}
-        {% set boost_raw = ((inputs['cold_threshold'] | float(0)) - outdoor_temp)
-            / (inputs['boost_slope_c'] | float(5)) %}
-      {% endif %}
-      {% set boost_clamped = [inputs['max_boost'] | float(3), boost_raw] | min %}
-      {% set boost = boost_clamped %}
-
-      {% set base_heatpump_target = comfort_target - comfort_offset %}
-      {% set comfort_target_unclamped = base_heatpump_target + boost %}
-      {% set storage_target_unclamped = (storage_target - storage_offset) + boost %}
-
-      {% set maintenance_target = inputs['maintenance_target_c'] | float(20) %}
-
-      {% set target_unclamped = comfort_target_unclamped %}
-      {% if comfort_satisfied and storage_needs_heat %}
-        {% set target_unclamped = [storage_target_unclamped, comfort_target_unclamped] | max %}
-      {% elif comfort_satisfied %}
-        {% set target_unclamped = maintenance_target %}
-      {% endif %}
-
-      {% set target_off = [max_c, [min_c, target_unclamped] | max] | min %}
-
-      {% set energy_saving_on = is_state(inputs['energy_saving_boolean'], 'on') %}
-      {% set warm_shutdown = inputs['energy_saving_warm_shutdown_outdoor'] | float(7) %}
-      {% set virtual_temperature = inputs['virtual_temperature'] | float(20) %}
-
-      {% if outdoor_temp is number and outdoor_temp >= warm_shutdown %}
-        {% set target_unclamped_on = virtual_temperature %}
-        {% set mode_detail_on = 'warm shutdown (virtual block)' %}
+      {% if policy_saving %}
+        {% set selected_source = 'saving target helper' %}
+      {% elif fallback_active %}
+        {% set selected_source = 'fallback minimum clamp' %}
       {% else %}
-        {% set target_unclamped_on = setpoint - 1 %}
-        {% set mode_detail_on = 'cold mode (setpoint - 1)' %}
-      {% endif %}
-      {% set target_on = [max_c, [min_c, target_unclamped_on] | max] | min %}
-
-      {% set last_ts = as_timestamp(states(inputs['electric_fallback_last_trigger'])) | float(0) %}
-      {% set now_ts = now().timestamp() %}
-      {% set cooldown_sec = (inputs['electric_fallback_cooldown_minutes'] | float(60)) * 60 %}
-      {% set cooldown_remaining = [0, (cooldown_sec - (now_ts - last_ts))] | max %}
-      {% set cooldown_remaining_min = (cooldown_remaining / 60) | round(1) %}
-      {% set cooldown_ok = (now_ts - last_ts) >= cooldown_sec %}
-
-      {% set fallback_delta = inputs['electric_fallback_delta_c'] | float(0.5) %}
-      {% set fallback_eligible = (not energy_saving_on) and
-          (comfort_min is number) and (comfort_min < (comfort_target - fallback_delta)) and cooldown_ok %}
-
-      **Mode**: {{ 'Energy saving ON' if energy_saving_on else 'Energy saving OFF' }}
-      {% if energy_saving_on %}
-      **Mode detail**: {{ mode_detail_on }}
-      **Target (ON)**: {{ target_on | round(2) }} C
-      {% else %}
-      **Target (OFF)**: {{ target_off | round(2) }} C
+        {% set selected_source = 'comfort target helper' %}
       {% endif %}
 
-      **Comfort**: min {{ comfort_min | round(2) if comfort_min is number else 'unknown' }} C
-      **Comfort satisfied**: {{ 'yes' if comfort_satisfied else 'no' }}
-      **Storage**: {{ storage_temp | round(2) if storage_temp is number else 'unknown' }} C
-      **Storage needs heat**: {{ 'yes' if storage_needs_heat else 'no' }}
-
-      **Boost**: {{ boost | round(2) }} C
-      **Outdoor**: {{ outdoor_temp | round(2) if outdoor_temp is number else 'unknown' }} C
-      **Control (current)**: {{ control_temp | round(2) if control_temp is number else 'unknown' }} C
-
-      **Maintenance target**: {{ maintenance_target | round(2) }} C
-      **Fallback eligible now**: {{ 'yes' if fallback_eligible else 'no' }}
-      **Fallback cooldown remaining**: {{ cooldown_remaining_min }} min
-
-      _Note: fallback eligibility reflects the current condition only; the configured
-      timer must still run for the full duration._
+      {% set control_delta = none %}
+      {% if target_final is number and control_current is number %}
+        {% set control_delta = (target_final - control_current) | round(3) %}
       {% endif %}
+
+      **Policy saving**: {{ 'ON' if policy_saving else 'OFF' }}
+      **Fallback active**: {{ 'ON' if fallback_active else 'OFF' }}
+      **Selected source**: {{ selected_source }}
+
+      **Saving target helper**: {{ target_saving | round(2) if target_saving is number else 'unknown' }} °C
+      **Comfort target helper**: {{ target_comfort | round(2) if target_comfort is number else 'unknown' }} °C
+      **Final target helper**: {{ target_final | round(2) if target_final is number else 'unknown' }} °C
+      **Control number (current)**: {{ control_current | round(2) if control_current is number else 'unknown' }} °C
+
+      **Final - control delta**: {{ control_delta if control_delta is not none else 'unknown' }} °C
+      {% endif %}
+
+  - type: custom:apexcharts-card
+    header:
+      show: true
+      title: Block Heat Targets (7d)
+    graph_span: 7d
+    span:
+      start: day
+    now:
+      show: true
+      label: Now
+    yaxis:
+      - id: temp
+        decimals: 1
+        min: 0
+        max: 35
+      - id: mode
+        min: 0
+        max: 1
+        decimals: 0
+        opposite: true
+        show: true
+    series:
+      - entity: input_number.block_heat_target_saving
+        name: Target saving
+        yaxis_id: temp
+        group_by:
+          duration: 30min
+          func: avg
+      - entity: input_number.block_heat_target_comfort
+        name: Target comfort
+        yaxis_id: temp
+        group_by:
+          duration: 30min
+          func: avg
+      - entity: input_number.block_heat_target_final
+        name: Target final
+        yaxis_id: temp
+        group_by:
+          duration: 30min
+          func: avg
+      - entity: number.REPLACE_control_temperature
+        name: Control number
+        yaxis_id: temp
+        group_by:
+          duration: 30min
+          func: avg
+      - entity: input_boolean.REPLACE_energy_saving
+        name: Policy saving
+        yaxis_id: mode
+        type: area
+        opacity: 0.2
+        transform: "return x === 'on' ? 1 : 0;"
+        group_by:
+          duration: 30min
+          func: last
+      - entity: input_boolean.block_heat_fallback_active
+        name: Fallback active
+        yaxis_id: mode
+        type: line
+        curve: stepline
+        transform: "return x === 'on' ? 1 : 0;"
+        group_by:
+          duration: 30min
+          func: last
 
   - type: entities
     title: Block Heat Entities (replace with yours)
     entities:
       - entity: input_boolean.REPLACE_energy_saving
         name: Energy saving boolean
-      - entity: sensor.REPLACE_comfort_room_1
-        name: Comfort room 1
-      - entity: sensor.REPLACE_comfort_room_2
-        name: Comfort room 2
-      - entity: sensor.REPLACE_storage_room
-        name: Storage room
-      - entity: sensor.REPLACE_outdoor
-        name: Outdoor
+      - entity: input_boolean.block_heat_fallback_active
+        name: Fallback active
+      - entity: input_number.block_heat_target_saving
+        name: Target saving helper
+      - entity: input_number.block_heat_target_comfort
+        name: Target comfort helper
+      - entity: input_number.block_heat_target_final
+        name: Target final helper
       - entity: number.REPLACE_control_temperature
         name: Control temperature
-      - entity: input_datetime.REPLACE_fallback_last_trigger
-        name: Electric fallback last trigger
+      - entity: input_datetime.block_heat_fallback_last_trigger
+        name: Fallback last trigger
