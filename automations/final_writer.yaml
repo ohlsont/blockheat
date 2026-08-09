@@ -6,12 +6,23 @@
 #   control_write_delta_c = 0.2 °C  (only write if |target - current| >= 0.2)
 #   control_min_c         = 10.0 °C
 #   control_max_c         = 26.0 °C
+#   rearm_settle_s        = 30 s    (Ohmigo must hold a value this long to re-arm)
+#   rearm_sweep_min       = 10 min  (periodic re-assert)
+#
+# Re-arm triggers: the inputs alone are not enough. The Ohmigo reverts to its
+# own value on its own -- after an HA restart, or spontaneously -- and while the
+# targets sit still nothing here fires, so a stale setpoint can persist for
+# hours. Watching the Ohmigo itself plus a periodic sweep closes that hole.
+# The `for:` delay keeps the automation from chasing the echo of its own write
+# and damps ping-pong if the device fights back.
 
 alias: "Blockheat — Final Writer"
 description: >
   Selects saving or comfort target, clamps to [10, 26] °C, and writes to
   number.ohmigo_temperature_2 only when the change exceeds the 0.2 °C deadband.
+  Re-asserts the target when the Ohmigo drifts on its own or after a restart.
 mode: single
+max_exceeded: silent
 trigger:
   - platform: state
     entity_id:
@@ -19,6 +30,17 @@ trigger:
       - input_number.blockheat_target_saving
       - input_number.blockheat_target_comfort
       - input_number.blockheat_bor
+  - platform: state
+    entity_id: number.ohmigo_temperature_2
+    for: "00:00:30"
+  - platform: time_pattern
+    minutes: "/10"
+condition:
+  # Never compute against a missing reading: `current` would fall back to 0.0
+  # and force a spurious write.
+  - condition: template
+    value_template: >
+      {{ states('number.ohmigo_temperature_2') not in ['unknown', 'unavailable'] }}
 action:
   - variables:
       saving: >
