@@ -38,9 +38,13 @@ trigger:
 condition:
   # Never compute against a missing reading: `current` would fall back to 0.0
   # and force a spurious write.
-  - condition: template
-    value_template: >
-      {{ states('number.ohmigo_temperature_2') not in ['unknown', 'unavailable'] }}
+  - condition: not
+    conditions:
+      - condition: state
+        entity_id: number.ohmigo_temperature_2
+        state:
+          - unknown
+          - unavailable
 action:
   - variables:
       saving: >
