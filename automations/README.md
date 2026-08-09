@@ -44,10 +44,11 @@ flowchart TD
     forecast --> comfort_target
     comfort_target --> ib_comfort["input_number.blockheat_target_comfort"]
 
-    flag --> final_writer["final_writer.yaml\nselect saving/comfort\n+ 0.2 °C deadband"]
+    flag --> final_writer["final_writer.yaml\nselect saving/comfort\n+ 0.2 °C deadband\n+ re-arm on drift / every 10 min"]
     ib_saving --> final_writer
     ib_comfort --> final_writer
     final_writer --> ohmigo["number.ohmigo_temperature_2\n(floor-heat setpoint)"]
+    ohmigo -.re-arm.-> final_writer
 
     flag --> daikin_policy["daikin_policy.yaml"]
     daikin_policy --> daikin["climate.daikinap75809_room_temperature\n(Daikin on/off)"]
@@ -58,15 +59,15 @@ flowchart TD
 
 ## Files
 
-| File                  | Purpose                                               |
-| --------------------- | ----------------------------------------------------- |
-| `helpers.yaml`        | Defines 5 helpers (2 input_boolean + 3 input_number)  |
-| `policy.yaml`         | Energy-saving policy: top-N price slots + hysteresis  |
-| `saving_target.yaml`  | Ohmigo saving-mode temperature target                 |
-| `comfort_target.yaml` | Ohmigo comfort target: 6-h boost + warm+sunny backoff |
-| `final_writer.yaml`   | Writes Ohmigo setpoint with deadband                  |
-| `daikin_policy.yaml`  | Daikin on/off per energy-saving flag                  |
-| `dehumidifier.yaml`   | Dehumidifier control (updated entity reference)       |
+| File                  | Purpose                                                   |
+| --------------------- | --------------------------------------------------------- |
+| `helpers.yaml`        | Defines 5 helpers (2 input_boolean + 3 input_number)      |
+| `policy.yaml`         | Energy-saving policy: top-N price slots + hysteresis      |
+| `saving_target.yaml`  | Ohmigo saving-mode temperature target                     |
+| `comfort_target.yaml` | Ohmigo comfort target: 6-h boost + warm+sunny backoff     |
+| `final_writer.yaml`   | Writes Ohmigo setpoint with deadband; re-asserts on drift |
+| `daikin_policy.yaml`  | Daikin on/off per energy-saving flag                      |
+| `dehumidifier.yaml`   | Dehumidifier control (updated entity reference)           |
 
 > **Note:** `comfort_target.yaml` uses `weather.get_forecasts` which requires HA 2023.9+.
 
